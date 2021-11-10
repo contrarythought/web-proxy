@@ -180,7 +180,7 @@ void execute_request(int req_type, char *request, int client_fd) {
             }
             
             /* send the actual GET request to the remote host, and then return the HTML string */
-            if(send(sock_fd, "HEAD / HTTP/1.0\r\n\r\n", strlen("HEAD / HTTP/1.0\r\n\r\n"), 0) == -1) {
+            if(send(sock_fd, "GET / HTTP/1.0\r\n\r\n", strlen("GET / HTTP/1.0\r\n\r\n"), 0) == -1) {
                 printf("Failed to send request to remote host\n");
                 return;
             }
