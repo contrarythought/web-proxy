@@ -122,7 +122,7 @@ void execute_request(int req_type, char *request, int client_fd) {
                 correct_end = 1;
             if((ptr = strstr(request, DOT_NET)))
                 correct_end = 1;
-            if((ptr = strstr(request, DOT_NET)))
+            if((ptr = strstr(request, DOT_ORG)))
                 correct_end = 1;
             
             char send_buf[4096];
@@ -178,7 +178,7 @@ void execute_request(int req_type, char *request, int client_fd) {
                 }
                 return;
             }
-               
+            
             /* send the actual GET request to the remote host, and then return the HTML string */
             if(send(sock_fd, "GET / HTTP/1.0\r\n\r\n", strlen("GET / HTTP/1.0\r\n\r\n"), 0) == -1) {
                 printf("Failed to send request to remote host\n");
