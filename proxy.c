@@ -1,19 +1,6 @@
 #include "common.h"
 #include "networking.h"
 
-#define GET_REQ "GET "
-#define POST_REQ "POST "
-#define PUT_REQ "PUT "
-
-#define HTTP_FRAME "http://www."
-#define WWW_FRAME " www."
-#define DOT_COM ".com"
-#define DOT_ORG ".org"
-#define DOT_EDU ".edu"
-#define DOT_GOV ".gov"
-#define DOT_NET ".net"
-
-
 int HTTP_req(char *request);
 int find_req_type(char *request);
 void execute_request(int req_type, char *request, int client_fd);
@@ -191,7 +178,7 @@ void execute_request(int req_type, char *request, int client_fd) {
                 }
                 return;
             }
-
+            
             /* send the actual GET request to the remote host, and then return the HTML string */
             if(send(sock_fd, "HEAD / HTTP/1.0\r\n\r\n", strlen("HEAD / HTTP/1.0\r\n\r\n"), 0) == -1) {
                 printf("Failed to send request to remote host\n");
@@ -251,8 +238,14 @@ int find_req_type(char *request) {
 
 int HTTP_req(char *request) {
     char *ptr;
-    ptr = strstr(request, "HTTP/");
-    if(ptr)
+    ptr = strstr(request, "HTTP/1.0");
+    if(ptr) {
         return 1;
+    }
+
+    ptr = strstr(request, "HTTP/1.1");
+    if(ptr) {
+        return 1;
+    }
     return 0;
 }
