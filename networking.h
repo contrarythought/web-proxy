@@ -11,7 +11,7 @@
 #define PUT_REQ "PUT "
 
 #define HTTP_FRAME "http://www."
-#define WWW_FRAME " www."
+#define WWW_FRAME "www."
 #define DOT_COM ".com"
 #define DOT_ORG ".org"
 #define DOT_EDU ".edu"
