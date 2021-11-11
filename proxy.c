@@ -87,7 +87,8 @@ int main(int argc, char **argv) {
                 }
             }else if (i==1) {
                 DNS = token;
-                int corr_addr = correct_addr_form(DNS);
+                // correct_addr_form() returns 0 if http://www., and returns 1 if www. Returns -1 if none are detected
+                int corr_addr = correct_addr_form(DNS); 
                 if(corr_addr == -1) {
                     printf("Invalid DNS\n");
                     strcpy(send_buffer, "Invalid DNS");
@@ -98,6 +99,7 @@ int main(int argc, char **argv) {
                 }else if(corr_addr == 0) {
                     char *blank = strtok(token, "http://");
                     DNS = strtok(NULL, "http://");
+                    // printf("DNS: %s\n", DNS);
                 }
             }else{
                 if(!HTTP_req(token)) {
@@ -106,6 +108,7 @@ int main(int argc, char **argv) {
                 }
             }
             token = strtok(NULL, " ");
+            printf("TOKEN: %s\n", token);
         }
 
         /* execute the request type */
@@ -122,13 +125,19 @@ int main(int argc, char **argv) {
 int correct_addr_form(char *request) {
     // TODO: I broke this functions somehow
     printf("Request: %s\n", request);
-    /*char *ptr = NULL;
-    if(ptr = strstr(request, HTTP_FRAME))
+    char *ptr = NULL;
+    if((ptr = strstr(request, HTTP_FRAME))) {
+        printf("HTTP detected\n");
         return 0;
-    else if(ptr = strstr(request, WWW_FRAME))
+    }
+    if((ptr = strstr(request, WWW_FRAME))) {
+        printf("WWW detected\n");
         return 1;
-    return -1;*/
-    return 1;
+    }
+
+    printf("Failed to detect \"http://\" or \"www.\"\n");
+    return -1;
+    //return 1;
 }
 
 // TODO
@@ -144,7 +153,7 @@ void execute_request(int req_type, char *request, int client_fd, char *DNS) {
     int sock_fd;
 
     /* extract the DNS for use in gethostbyname() */
-    char *send_buf[5000];
+    char send_buf[5000];
     memset(send_buf, 0, sizeof(send_buf));
 
     //int DNS_LEN = 0;
