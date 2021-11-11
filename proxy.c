@@ -4,6 +4,9 @@
 int HTTP_req(char *request);
 int find_req_type(char *request);
 void execute_request(int req_type, char *request, int client_fd);
+void exec_get(); // TODO
+void exec_head();
+int correct_addr_form(char *addr);
 
 int main(int argc, char **argv) {
     if(argc != 2) {
@@ -86,11 +89,28 @@ int main(int argc, char **argv) {
 
         /* execute the request type */
         execute_request(req_type, recv_buffer, client_to_proxy);
+
+        // NEED TO DELETE THIS BREAK EVENTUALLY
         break;
     }
 
     close(proxy_listener);
     return EXIT_SUCCESS;
+}
+
+int correct_addr_form(char *request) {
+    printf("%s\n", request);
+    char *ptr = NULL;
+    int correct_beginning = 0, correct_ending = 0;
+
+    if((ptr = strstr(request, HTTP_FRAME)) || (ptr = strstr(request, WWW_FRAME)))
+        correct_beginning = 1;
+    if((ptr = strstr(request, DOT_COM)) || (ptr = strstr(request, DOT_EDU)) || (ptr = strstr(request, DOT_GOV))
+    || (ptr = strstr(request, DOT_NET)) || (ptr = strstr(request, DOT_ORG)))
+        correct_ending = 1;
+    if(correct_beginning == 0 || correct_ending == 0)
+        return -1;
+    return 1;
 }
 
 // TODO
@@ -106,38 +126,21 @@ void execute_request(int req_type, char *request, int client_fd) {
     int sock_fd;
 
     /* extract the DNS for use in gethostbyname() */
-    char *ptr, *DNS = NULL;
-    int DNS_LEN = 0, correct_beginning = 0, correct_end = 0;
+    char *ptr, *DNS = NULL, send_buf[5000];
+    memset(send_buf, 0, sizeof(send_buf));
+
+    int DNS_LEN = 0;
     switch(req_type) {
         case GET: /* TODO: PUT IN SEPARATE FUNCTION */
-            if((ptr = strstr(request, HTTP_FRAME)))
-                correct_beginning = 1;
-            if((ptr = strstr(request, WWW_FRAME)))
-                correct_beginning = 1;
-            if((ptr = strstr(request, DOT_COM)))
-                correct_end = 1;
-            if((ptr = strstr(request, DOT_EDU)))
-                correct_end = 1;
-            if((ptr = strstr(request, DOT_GOV)))
-                correct_end = 1;
-            if((ptr = strstr(request, DOT_NET)))
-                correct_end = 1;
-            if((ptr = strstr(request, DOT_ORG)))
-                correct_end = 1;
-            
-            char send_buf[4096];
-            /* TODO */
-            /* need to send error message to client as well */
-            if(!correct_beginning || !correct_end) {
+            if(correct_addr_form(request) == -1) {
                 printf("Invalid DNS\n");
-                memset(send, 0, sizeof(send_buf));
-                strcpy(send_buf, "Invalid DNS\n");
+                strcpy(send_buf, "Invalid DNS");
                 if(send(client_fd, send_buf, strlen(send_buf), 0) == -1) {
-                    printf("Failed to send data to client\n"); 
-                    return;
+                    printf("Failed to send data to client\n");
                 }
                 return;
             }
+            
             ptr = request + strlen(GET_REQ);
             /* get the DNS */
             int i;
@@ -150,6 +153,7 @@ void execute_request(int req_type, char *request, int client_fd) {
             
             /* now that I have the DNS, I just need to retrieve the html string of that website, and then return it 
                 to the client */
+            printf("%s\n", DNS);
             target_info = gethostbyname(DNS);
             if(target_info == NULL) {
                 printf("Failed to retrieve remote host address\n");
@@ -180,7 +184,7 @@ void execute_request(int req_type, char *request, int client_fd) {
             }
             
             /* send the actual GET request to the remote host, and then return the HTML string */
-            if(send(sock_fd, "GET / HTTP/1.0\r\n\r\n", strlen("GET / HTTP/1.0\r\n\r\n"), 0) == -1) {
+            if(send(sock_fd, "GET / HTTP/1.1\r\n\r\n", strlen("GET / HTTP/1.1\r\n\r\n"), 0) == -1) {
                 printf("Failed to send request to remote host\n");
                 return;
             }
@@ -198,12 +202,15 @@ void execute_request(int req_type, char *request, int client_fd) {
                 return;
             }
             break;
+        case HEAD:
+            //exec_head();
+            break;
     }
 
 }
 
 int find_req_type(char *request) {
-    char *ptr = request;
+    char *ptr = request; // pointing at beginning of request
     int i, correct_req = 1;
     switch(*ptr) {
         case 'P':
@@ -232,6 +239,12 @@ int find_req_type(char *request) {
                     return -1;
             }
             return GET;
+        case 'H':
+            for(i = 1; isalpha(*(ptr + i)); i++) {
+                if(ptr[i] != HEAD_REQ[i])
+                    return -1;
+            }
+            return HEAD;
     }
     return -1;
 }
