@@ -12,16 +12,13 @@
 
 #define HTTP_FRAME "http://"
 #define WWW_FRAME "www."
-#define DOT_COM ".com"
-#define DOT_ORG ".org"
-#define DOT_EDU ".edu"
-#define DOT_GOV ".gov"
-#define DOT_NET ".net"
 
 enum REQUEST_TYPE {
     GET = 1,
     POST,
-    PUT
+    PUT,
+    HEAD,
+    CONNECT
 };
 
 void dump(char *str) {
