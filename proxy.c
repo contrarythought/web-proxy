@@ -103,6 +103,8 @@ int main(int argc, char **argv) {
                     // This is needed because with http:// delimineter it took sites with http inside stripped
                     DNS = strtok(NULL, "://");
                     printf("DNS: %s\n", DNS);
+                }else {
+                    DNS = token + 1; // if just 'www.', need DNS to pass the first '/' (i.e. localhost:8000/www.hostname.com)
                 }
             }else{
                 if(!HTTP_req(token)) {
@@ -187,6 +189,7 @@ void execute_request(int req_type, char *request, int client_fd, char *DNS) {
             // We will need the concat() function here to replace hardcoded HTTP/1.1 with actual value
             char *req = concat("GET / HTTP/1.1\r\nHost: ", DNS);
             req = concat(req, "\r\n\r\n");
+            printf("REQUEST: %s\n", req);
             if(send(sock_fd, req, strlen(req), 0) == -1) {
                 printf("Failed to send request to remote host\n");
                 return;
