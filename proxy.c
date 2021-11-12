@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
         char *token = strtok(recv_buffer, " ");
         int req_type;
         char *DNS = NULL;
-        for (int i=0;i<3;i++) {
+        for (int i=0;i<3 && token;i++) {
             printf("%s\n",token);            
             if (i==0) {
                 req_type = find_req_type(token);
@@ -97,9 +97,10 @@ int main(int argc, char **argv) {
                     }
                     break;
                 }else if(corr_addr == 0) {
-                    char *blank = strtok(token, "http://");
-                    DNS = strtok(NULL, "http://");
-                    // printf("DNS: %s\n", DNS);
+                    printf("TOKEN TO PARSE: %s\n", token);
+                   // char *blank = strtok(token, "http://");
+                    DNS = strtok(token, "http://");
+                    printf("DNS: %s\n", DNS);
                 }
             }else{
                 if(!HTTP_req(token)) {
@@ -110,7 +111,8 @@ int main(int argc, char **argv) {
             token = strtok(NULL, " ");
             printf("TOKEN: %s\n", token);
         }
-
+        
+        printf("EXITED LOOP\n");
         /* execute the request type */
         execute_request(req_type, recv_buffer, client_to_proxy, DNS);
 
