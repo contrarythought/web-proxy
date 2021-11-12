@@ -185,7 +185,9 @@ void execute_request(int req_type, char *request, int client_fd, char *DNS) {
             
             /* send the actual GET request to the remote host, and then return the HTML string */
             // We will need the concat() function here to replace hardcoded HTTP/1.1 with actual value
-            if(send(sock_fd, "GET / HTTP/1.1\r\n\r\n", strlen("GET / HTTP/1.1\r\n\r\n"), 0) == -1) {
+            char *req = concat("GET / HTTP/1.1\r\nHost: ", DNS);
+            req = concat(req, "\r\n\r\n");
+            if(send(sock_fd, req, strlen(req), 0) == -1) {
                 printf("Failed to send request to remote host\n");
                 return;
             }
