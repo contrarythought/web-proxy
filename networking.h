@@ -10,7 +10,7 @@
 #define POST_REQ "POST "
 #define PUT_REQ "PUT "
 
-#define HTTP_FRAME "http://www."
+#define HTTP_FRAME "http://"
 #define WWW_FRAME "www."
 #define DOT_COM ".com"
 #define DOT_ORG ".org"
