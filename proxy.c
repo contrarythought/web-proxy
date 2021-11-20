@@ -3,7 +3,7 @@
 
 int HTTP_req(char *request);
 int find_req_type(char *request);
-void execute_request(int req_type, char *request, int client_fd, char *DNS, char *requestbase);
+void execute_request(int req_type, char *request, int client_fd, char *DNS, char *http_version);
 void exec_get(); // TODO
 void exec_head();
 int correct_addr_form(char *addr);
@@ -62,7 +62,6 @@ int main(int argc, char **argv) {
 
     /* start up the proxy server */
     char recv_buffer[5000], send_buffer[5000];
-    char *save_request = NULL;
     while(1) {
         int client_to_proxy;
         socklen_t len = sizeof(struct sockaddr);
@@ -81,11 +80,11 @@ int main(int argc, char **argv) {
             err("receiving data from client");
         }
         printf("REQUEST: %s\n",recv_buffer);
-        save_request = strdup(recv_buffer);
         // variables to pass to the actual request function
-        char *token = strtok(recv_buffer, " ");
+        char *save_request = strdup(recv_buffer);
+        char *token = strtok(save_request, " "); //We dont wanna modify the buffer with strtok before passing it to execute_request()
         int req_type;
-        char *requestbase = NULL;
+        char *http_version = NULL;
         char *DNS = NULL;
         for (int i = 0; i < 3 && token; i++) {     
             // For the first token in the request, find out what kind of request it is (GET, POST, etc)
@@ -98,13 +97,9 @@ int main(int argc, char **argv) {
                 }
             } else if(i == 1) {
                 printf("DNS TOKEN: {%s}\n", token);
-                int correct_addr = correct_addr_form(token);
-                if(correct_addr == 0) {
-                    DNS = token + strlen(HTTP_FRAME);
-                } else if(correct_addr == 1) {
-                    DNS = token + strlen(WWW_FRAME);
-                }
+                DNS = token;
             } else if(i == 2) {
+                http_version = token;
                 printf("HTTP TOKEN: {%s}\n", token);
                 if(HTTP_req(token)) {
                     printf("HTTP detected\n");
@@ -112,24 +107,11 @@ int main(int argc, char **argv) {
                     printf("Not an HTTP request\n");
                     break;
                 }
-
-                /* setting up requestbase */
-                //char *http = strtok(token, "\n"); // grab HTTP/1.X by itself ('\n' separates HTTP/1.X and "Host:")
-                char *separator = "Host:";//concat(token,"\r\n");
-                requestbase = strtok(save_request, separator);
-                requestbase = strtok(NULL, separator);
-                //requestbase = strstr(save_request, "Host:");
-                //if(!requestbase) {
-                //    printf("Cannot find headers\n");
-                //    break;
-                //}
-                printf("REQUEST BASE: %s\n", requestbase);
-            } 
-
+            }
             token = strtok(NULL, " ");
         }
         /* execute the request type */
-       // execute_request(req_type, recv_buffer, client_to_proxy, DNS, requestbase);
+        execute_request(req_type, recv_buffer, client_to_proxy, DNS, http_version);
 
         // NEED TO DELETE THIS BREAK EVENTUALLY
         break;
@@ -152,7 +134,7 @@ int correct_addr_form(char *request) {
 }
 
 // TODO
-void execute_request(int req_type, char *request, int client_fd, char *DNS, char *requestbase) {
+void execute_request(int req_type, char *request, int client_fd, char *DNS, char *http_version) {
     printf("In execute_request()\n");
     /* gethostbyname() returns a struct hostent * */
     struct hostent *target_info = NULL;
@@ -162,13 +144,22 @@ void execute_request(int req_type, char *request, int client_fd, char *DNS, char
 
     /* socket that will connect to the address provided by target_info */
     int sock_fd;
-
-    /* extract the DNS for use in gethostbyname() */
+    char *save_request = strdup(request);
     char send_buf[5000];
     memset(send_buf, 0, sizeof(send_buf));
             /* now that I have the DNS, I just need to retrieve the html string of that website, and then return it 
                 to the client */
             printf("%s\n", DNS);
+            int correct_addr = correct_addr_form(DNS);
+            if(correct_addr == 0) {
+                DNS = strtok(DNS,"/");
+                DNS = strtok(NULL,"/");
+                printf("DNS: %s\n", DNS);
+            } else if(correct_addr == 1) {
+                //Do we need to check for www frame?
+                //DNS = strtok(DNS,"www.");
+                //DNS = strtok(NULL,"www.");
+            }
             target_info = gethostbyname(DNS);
             if(target_info == NULL) {
                 printf("Failed to retrieve remote host address\n");
@@ -199,16 +190,28 @@ void execute_request(int req_type, char *request, int client_fd, char *DNS, char
             }
             
             /* send the actual GET request to the remote host, and then return the HTML string */
-            // We will need the concat() function here to replace hardcoded HTTP/1.1 with actual value
+            
+            http_version = strtok(http_version,"\r\n");
+            printf("HTTP_VERSION: %s\n", http_version);
+            /* setting up requestbase */
+            char *requestbase = strstr(save_request, http_version); //Requestbase includes http version now
+            printf("REQUEST BASE: %s\n", requestbase);
+            if(!requestbase) {
+                return; //prevent segfault
+            }
             char *req = NULL;
             switch (req_type) {
                 case GET:
-                    req = concat("GET / HTTP/1.1\r\n", requestbase);
+                    req = concat("GET / ", requestbase);
+                    //req = concat(req, "\r\n"); //We don't need another newline
+                    break;
                 case POST:
-                    req = concat("POST / HTTP/1.1\r\n", requestbase);
+                    req = concat("POST / ", requestbase);
+                    //req = concat(req, "\r\n");
+                    break;
             }
             req = concat(req, "\r\n\r\n");
-            printf("REQUEST: %s\n", req);
+            printf("REQUEST: %s", req);
             if(send(sock_fd, req, strlen(req), 0) == -1) {
                 printf("Failed to send request to remote host\n");
                 return;
@@ -229,18 +232,6 @@ void execute_request(int req_type, char *request, int client_fd, char *DNS, char
 }
 
 int find_req_type(char *request) {
-    /*//Not working
-    if (request=="GET") {
-        return GET;
-    }else if (request=="POST"){
-        return POST;
-    }else if (request=="PUT"){
-        return PUT;
-    }else if (request=="HEAD"){
-        //return HEAD;
-    }else{
-        return -1;
-    }*/
     // + CONNECT method when we'll be using SSL/TLS
     char *ptr = request; // pointing at beginning of request
     int i, correct_req = 1;
@@ -263,7 +254,7 @@ int find_req_type(char *request) {
             }
             if(correct_req)
                 return PUT;
-            else 
+            else
                 return -1;
         case 'G':
             for(i = 1; isalpha(*(ptr + i)); i++) {
@@ -278,6 +269,12 @@ int find_req_type(char *request) {
             }
             return -1;
             //return HEAD;
+        case 'C':
+            for(i = 1; isalpha(*(ptr + i)); i++) {
+                //if(ptr[i] != CONNECT[i])
+                    return -1;
+            }
+            //return CONNECT;
     }
     return -1;
 }
