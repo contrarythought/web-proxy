@@ -146,6 +146,7 @@ void execute_request(int req_type, char *request, int client_fd, char *DNS, char
     int sock_fd;
     char *save_request = strdup(request);
     char send_buf[5000];
+    char *PATH = "";
     memset(send_buf, 0, sizeof(send_buf));
             /* now that I have the DNS, I just need to retrieve the html string of that website, and then return it 
                 to the client */
@@ -154,11 +155,13 @@ void execute_request(int req_type, char *request, int client_fd, char *DNS, char
             if(correct_addr == 0) {
                 DNS = strtok(DNS,"/");
                 DNS = strtok(NULL,"/");
+                PATH = strtok(NULL,"/");
                 printf("DNS: %s\n", DNS);
             } else if(correct_addr == 1) {
                 //Do we need to check for www frame?
                 //DNS = strtok(DNS,"www.");
                 //DNS = strtok(NULL,"www.");
+                PATH = strtok(NULL,"/");
             }
             target_info = gethostbyname(DNS);
             if(target_info == NULL) {
@@ -202,11 +205,15 @@ void execute_request(int req_type, char *request, int client_fd, char *DNS, char
             char *req = NULL;
             switch (req_type) {
                 case GET:
-                    req = concat("GET / ", requestbase);
+                    req = concat("GET /", PATH);
+                    req = concat(req, " ");
+                    req = concat(req, requestbase);
                     //req = concat(req, "\r\n"); //We don't need another newline
                     break;
                 case POST:
-                    req = concat("POST / ", requestbase);
+                    req = concat("POST /", PATH);
+                    req = concat(req, " ");
+                    req = concat(req, requestbase);
                     //req = concat(req, "\r\n");
                     break;
             }
